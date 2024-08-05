@@ -10,6 +10,6 @@ Solution to automatically rotate AWS Access Keys and enable remote machines to d
 - Create a cron job that runs daily to check for updates
 
 ## To Do
-- Create the Lambda that does the automated rotation
-  - The Lambda should run monthly, this gives each system up to a month to update itself
-  - Anything that isn't updating, you can see in the Update Bucket since it's hostname based file won't be updating
+- The Lambda currently does not take an evironment variable of the parameters/users to change, this should get updated to allow for easier configuration.
+- The Lambda currently can only handle 1 parameter store and user, so it would need to be replicated per use.
+- Install on another account so I can capture accurate installation/setup instructions.
