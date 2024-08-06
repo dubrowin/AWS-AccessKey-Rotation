@@ -18,7 +18,7 @@ PARAMS="param-test"
 # PARAMREGION is if the Parameter Store is not in the default region
 PARAMREGION="us-east-1"
 # UPDATEBUCKET is the bucket used to collect the updates to identify which systems have updated their keys
-UPDATEBUCKET="shlomod-976921666931-key-update"
+UPDATEBUCKET="<accountid>-key-update"
 # Profile if you are using an AWS CLI Profile in your configuration
 PROFILE=""
 
@@ -65,7 +65,7 @@ for PARAMNAME in $PARAMS; do
 	Debug "Processing $PARAMNAME"
 	## Get the Param Data
 	#PARAMS=`aws ssm get-parameter --name $PARAMNAME --region $PARAMREGION | grep Value | cut -d \" -f 4`
-	aws ssm get-parameter --name $PARAMNAME --region $PARAMREGION | grep Value | cut -d \" -f 4 | awk '{gsub(/\\n/,"\n")}1' | grep -v "^$" > $TMP1 || Error
+	aws $PROFILE ssm get-parameter --name $PARAMNAME --region $PARAMREGION | grep Value | cut -d \" -f 4 | awk '{gsub(/\\n/,"\n")}1' | grep -v "^$" > $TMP1 || Error
 	#echo "PARAMS $PARAMS"
 	#cat $TMP1
 
@@ -124,7 +124,7 @@ done
 TMP2STAT=`cat $TMP2 | wc -l`
 if [ "$TMP2STAT" != "0" ]; then
 	Debug "TMP2 ($TMP2) was used ($TMP2STAT), sending to $UPDATEBUCKET"
-	aws s3 cp $TMP2 s3://${UPDATEBUCKET} || Error
+	aws $PROFILE s3 cp $TMP2 s3://${UPDATEBUCKET} || Error
 fi
 
 Debug "removing $TMP1 $TMP2"
