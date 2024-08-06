@@ -14,10 +14,11 @@
 #########################
 # PARAMS is a space list of Parameters to test for
 PARAMS="param-test backup-test"
+PARAMS="param-test"
 # PARAMREGION is if the Parameter Store is not in the default region
 PARAMREGION="us-east-1"
 # UPDATEBUCKET is the bucket used to collect the updates to identify which systems have updated their keys
-UPDATEBUCKET="<BUCKET>"
+UPDATEBUCKET="shlomod-976921666931-key-update"
 # Profile if you are using an AWS CLI Profile in your configuration
 PROFILE=""
 
@@ -28,8 +29,6 @@ echo -e "\c" > $TMP2
 DEBUG="Y"
 export PATH="/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin"
 TAG="$( basename "$0" )"
-
-
 
 #########################
 ## Functions
@@ -48,12 +47,17 @@ function Debug {
 	fi
 }
 
+function Error {
+	Debug "Error Occured, stopping"
+	exit 1
+}
+
 #########################
 ## Main Code
 #########################
 
 if [ ! -z $PROFILE ]; then
-        PROFILE="--profile $PROFILE"
+	PROFILE="--profile $PROFILE"
 fi
 Debug "Using a profile setting of: $PROFILE"
 
@@ -61,7 +65,7 @@ for PARAMNAME in $PARAMS; do
 	Debug "Processing $PARAMNAME"
 	## Get the Param Data
 	#PARAMS=`aws ssm get-parameter --name $PARAMNAME --region $PARAMREGION | grep Value | cut -d \" -f 4`
-	aws $PROFILE ssm get-parameter --name $PARAMNAME --region $PARAMREGION | grep Value | cut -d \" -f 4 | tr '\\n' '\n' | grep -v "^$" > $TMP1
+	aws ssm get-parameter --name $PARAMNAME --region $PARAMREGION | grep Value | cut -d \" -f 4 | awk '{gsub(/\\n/,"\n")}1' | grep -v "^$" > $TMP1 || Error
 	#echo "PARAMS $PARAMS"
 	#cat $TMP1
 
@@ -71,7 +75,7 @@ for PARAMNAME in $PARAMS; do
 	Debug "NEWKEY $NEWKEY"
 
 	## Is the Latest Key being used?
-	NEWKEYSTAT=`find ~/.aws/ \( -name "config" -o -name "credentialss" \) -exec grep -c $NEWKEY {} \; | paste -sd+ - | bc`
+	NEWKEYSTAT=`find ~/.aws/ \( -name "config" -o -name "credentials" \) -exec grep -c ${NEWKEY} {} \; | paste -sd+ - | bc`
 	Debug "NEWKEYSTAT $NEWKEYSTAT"
 
 	if [ "$NEWKEYSTAT" != "0" ]; then
@@ -87,9 +91,9 @@ for PARAMNAME in $PARAMS; do
 		#FILEUPDATE=`find ~/.aws/ \( -name "config" -o -name "credentials" \) -exec grep -cH $OLDKEY {} \; | grep -v :0 | cut -d : -f 1`
 		
 		# Collect New and Old Secrets
-		NEWSECRET=`grep $NEWKEY -A 1 $TMP1 | grep -v $NEWKEY | cut -d = -f 2`
-		OLDSECRET=`grep $OLDKEY -A 1 $TMP1 | grep -v $OLDKEY | cut -d = -f 2`	
-		#echo "NEWSECRET $NEWSECRET OLDSECRET $OLDSECRET"
+		NEWSECRET=`grep $NEWKEY -A 1 $TMP1 | grep -v $NEWKEY | cut -d = -f 2 | sed 's/^[ \t]*//'`
+		OLDSECRET=`grep $OLDKEY -A 1 $TMP1 | grep -v $OLDKEY | cut -d = -f 2 | sed 's/^[ \t]*//'`	
+		#Debug "NEWSECRET $NEWSECRET OLDSECRET $OLDSECRET"
 	
 		COUNT="0"
 	
@@ -99,8 +103,10 @@ for PARAMNAME in $PARAMS; do
 			let "COUNT = $COUNT + 1"
 
 			# Do the Update of Access Key and Secret Key
-			sed -i "s/$OLDKEY/$NEWKEY/g" $FILE
-			sed -i "s/$OLDSECRET/$NEWSECRET/g" $FILE
+			#Debug "sed -i \"s/${OLDKEY}/${NEWKEY}/g\" $FILE || Error"
+			sed -i "s/${OLDKEY}/${NEWKEY}/g" $FILE || Error
+			#Debug "sed -i \"s:${OLDSECRET}:${NEWSECRET}:g\" $FILE || Error"
+			sed -i "s:${OLDSECRET}:${NEWSECRET}:g" $FILE || Error
 
 			# Update Notification
 			Debug "Param $PARAMNAME updated to $NEWKEY in $FILE written to $TMP2" 
@@ -118,7 +124,7 @@ done
 TMP2STAT=`cat $TMP2 | wc -l`
 if [ "$TMP2STAT" != "0" ]; then
 	Debug "TMP2 ($TMP2) was used ($TMP2STAT), sending to $UPDATEBUCKET"
-	aws $PROFILE s3 cp $TMP2 s3://${UPDATEBUCKET}
+	aws s3 cp $TMP2 s3://${UPDATEBUCKET} || Error
 fi
 
 Debug "removing $TMP1 $TMP2"
