@@ -24,7 +24,7 @@ PROFILE=""
 
 ## Do not update below here
 TMP1="/tmp/$( basename "$0" ).1.tmp"
-TMP2="/tmp/$( basename "$0" ).$HOSTNAME.tmp"
+TMP2="/tmp/$( basename "$0" ).$HOSTNAME.txt"
 echo -e "\c" > $TMP2
 DEBUG="Y"
 export PATH="/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin"
