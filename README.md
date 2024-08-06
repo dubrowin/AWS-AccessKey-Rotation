@@ -109,4 +109,5 @@ Schedule via cron
 - The Lambda currently does not take an evironment variable of the parameters/users to change, this should get updated to allow for easier configuration.
 - The Lambda currently can only handle 1 parameter store and user, so it would need to be replicated per use.
 - The AWS resources should be a CloudFormation template for easier setup
+  - Might be able to even deploy the bash script to the S3 updater bucket with some of the parameters pre-defined.
 - ~~Install on another account so I can capture accurate installation/setup instructions.~~
