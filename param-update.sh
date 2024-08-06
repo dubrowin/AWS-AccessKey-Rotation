@@ -18,12 +18,18 @@ PARAMS="param-test backup-test"
 PARAMREGION="us-east-1"
 # UPDATEBUCKET is the bucket used to collect the updates to identify which systems have updated their keys
 UPDATEBUCKET="<BUCKET>"
+# Profile if you are using an AWS CLI Profile in your configuration
+PROFILE=""
+
+## Do not update below here
 TMP1="/tmp/$( basename "$0" ).1.tmp"
 TMP2="/tmp/$( basename "$0" ).$HOSTNAME.tmp"
 echo -e "\c" > $TMP2
 DEBUG="Y"
 export PATH="/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin"
 TAG="$( basename "$0" )"
+
+
 
 #########################
 ## Functions
@@ -46,11 +52,16 @@ function Debug {
 ## Main Code
 #########################
 
+if [ ! -z $PROFILE ]; then
+        PROFILE="--profile $PROFILE"
+fi
+Debug "Using a profile setting of: $PROFILE"
+
 for PARAMNAME in $PARAMS; do
 	Debug "Processing $PARAMNAME"
 	## Get the Param Data
 	#PARAMS=`aws ssm get-parameter --name $PARAMNAME --region $PARAMREGION | grep Value | cut -d \" -f 4`
-	aws ssm get-parameter --name $PARAMNAME --region $PARAMREGION | grep Value | cut -d \" -f 4 | tr '\\n' '\n' | grep -v "^$" > $TMP1
+	aws $PROFILE ssm get-parameter --name $PARAMNAME --region $PARAMREGION | grep Value | cut -d \" -f 4 | tr '\\n' '\n' | grep -v "^$" > $TMP1
 	#echo "PARAMS $PARAMS"
 	#cat $TMP1
 
@@ -107,7 +118,7 @@ done
 TMP2STAT=`cat $TMP2 | wc -l`
 if [ "$TMP2STAT" != "0" ]; then
 	Debug "TMP2 ($TMP2) was used ($TMP2STAT), sending to $UPDATEBUCKET"
-	aws s3 cp $TMP2 s3://${UPDATEBUCKET}
+	aws $PROFILE s3 cp $TMP2 s3://${UPDATEBUCKET}
 fi
 
 Debug "removing $TMP1 $TMP2"
